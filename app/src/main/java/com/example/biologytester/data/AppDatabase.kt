@@ -17,14 +17,29 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        val MIGRATION_1_2 = object : Migration(1, 2) {
+        val MIGRATION_1_3 = object : Migration(1, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // If it was v1, we provide a safe fallback path. We assume current schema is what we need.
+                // Add new columns to quizzes table
+                db.execSQL("ALTER TABLE quizzes ADD COLUMN timeSpentSeconds INTEGER NOT NULL DEFAULT 0")
+
+                // Add new columns to questions table
+                db.execSQL("ALTER TABLE questions ADD COLUMN isFlagged INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN isAnswered INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN isCorrect INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN selectedIndex INTEGER NOT NULL DEFAULT -1")
             }
         }
+
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Future-proofing
+                // Add new columns to quizzes table
+                db.execSQL("ALTER TABLE quizzes ADD COLUMN timeSpentSeconds INTEGER NOT NULL DEFAULT 0")
+
+                // Add new columns to questions table
+                db.execSQL("ALTER TABLE questions ADD COLUMN isFlagged INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN isAnswered INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN isCorrect INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE questions ADD COLUMN selectedIndex INTEGER NOT NULL DEFAULT -1")
             }
         }
 
@@ -35,9 +50,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "quiz_database"
                 )
-                // Add migrations explicitly instead of destroying databases on updates.
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .fallbackToDestructiveMigrationFrom(1) // Only destroy if extremely old unrecoverable version
+                // Add explicit SQL migrations to preserve user data instead of throwing Exceptions
+                .addMigrations(MIGRATION_1_3, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance

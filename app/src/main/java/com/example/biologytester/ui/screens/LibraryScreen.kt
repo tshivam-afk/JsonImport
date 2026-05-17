@@ -34,7 +34,8 @@ import java.util.*
 @Composable
 fun LibraryScreen(
     onNavigateToQuiz: (Long) -> Unit,
-    onNavigateToReview: () -> Unit
+    onNavigateToReview: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: QuizViewModel = viewModel()
@@ -52,7 +53,7 @@ fun LibraryScreen(
             TopAppBar(
                 title = { Text("Quiz Library") },
                 actions = {
-                    IconButton(onClick = { onNavigateToReview() }) {
+                    IconButton(onClick = { onNavigateToSettings() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }

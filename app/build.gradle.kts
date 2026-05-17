@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.example.biologytester"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.biologytester"
-        minSdk = 26
-        targetSdk = 34
+        minSdk = 29
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -21,20 +21,10 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
