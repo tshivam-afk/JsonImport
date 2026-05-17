@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.example.biologytester"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.biologytester"
-        minSdk = 26
-        targetSdk = 34
+        minSdk = 29
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
