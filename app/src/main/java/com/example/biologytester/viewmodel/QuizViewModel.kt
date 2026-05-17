@@ -26,6 +26,42 @@ class QuizViewModel(application: Application) : AndroidViewModel(application) {
     private val _importStatus = MutableStateFlow<String?>(null)
     val importStatus = _importStatus.asStateFlow()
 
+    fun importQuiz(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val jsonString = inputStream?.bufferedReader().use { it?.readText() } ?: ""
+                val title = getFileName(context, uri) ?: "Imported Quiz"
+                importQuiz(jsonString, title)
+            } catch (e: Exception) {
+                _importStatus.value = "Error reading file: \${e.message}"
+            }
+        }
+    }
+
+    private fun getFileName(context: android.content.Context, uri: android.net.Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME))
+                }
+            } finally {
+                cursor?.close()
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/') ?: -1
+            if (cut != -1) {
+                result = result?.substring(cut + 1)
+            }
+        }
+        // remove extension
+        return result?.substringBeforeLast(".") ?: result
+    }
+
     fun importQuiz(jsonString: String, title: String) {
         viewModelScope.launch {
             try {

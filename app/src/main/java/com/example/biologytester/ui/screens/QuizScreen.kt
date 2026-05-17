@@ -192,7 +192,8 @@ fun QuizScreen(
                         slideOutHorizontally(animationSpec = tween(300)) { width -> width } + fadeOut()
                     }.using(SizeTransform(clip = false))
                 },
-                modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
+                modifier = Modifier.weight(1f)
+                        .padding(horizontal = 16.dp).padding(horizontal = 20.dp),
                 label = "QuestionAnimation"
             ) { targetIndex ->
                 val q = questions[targetIndex]
@@ -399,7 +400,8 @@ fun OptionItem(
                 style = MaterialTheme.typography.bodyLarge,
                 color = textColor,
                 fontWeight = if (isSelected || (isAnswered && isCorrectOption)) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
+                        .padding(horizontal = 16.dp),
                 lineHeight = 24.sp
             )
             if (icon != null) {
