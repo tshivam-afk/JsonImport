@@ -34,26 +34,28 @@ jobs:
           name: app-release
           path: app/build/outputs/apk/release/app-release-unsigned.apk
 
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+ release:
+  name: Create GitHub Release
+  needs: build
+  runs-on: ubuntu-latest
+  if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+  permissions:
+    contents: write
+    
+  steps:
+    - name: Download APK from build
+      uses: actions/download-artifact@v4
+      with:
+        name: app-release
+        path: .
 
-    steps:
-      - name: Download APK from build
-        uses: actions/download-artifact@v4
-        with:
-          name: app-release
-          path: .
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: app-release-unsigned.apk
-          tag_name: ${{ github.ref_name }} # You can change this manually or use github tag ref
-          name: "Release Biology Practice Tester"
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: app-release-unsigned.apk
+        tag_name: ${{ github.ref_name }}
+        name: "Release Biology Practice Tester"
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
