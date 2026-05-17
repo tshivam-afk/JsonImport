@@ -96,7 +96,8 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.Library.route) {
                             LibraryScreen(
                                 onNavigateToQuiz = { quizId -> navController.navigate(Screen.Quiz.createRoute(quizId)) },
-                                onNavigateToReview = { navController.navigate("settings") }
+                                onNavigateToReview = { navController.navigate(Screen.Review.route) },
+                                onNavigateToSettings = { navController.navigate("settings") }
                             )
                         }
                         composable(
