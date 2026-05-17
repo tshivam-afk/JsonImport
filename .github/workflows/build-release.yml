@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/release/app-release.apk
 
   release:
     name: Create GitHub Release
@@ -50,7 +50,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: app-release-unsigned.apk
+          files: app-release.apk
           tag_name: ${{ github.ref_name }} # You can change this manually or use github tag ref
           name: "Release Biology Practice Tester"
           draft: false
