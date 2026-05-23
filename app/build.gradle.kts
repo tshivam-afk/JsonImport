@@ -21,10 +21,24 @@ android {
         }
     }
 
+    signingConfigs {
+        // We use a dummy keystore bundled with the repo specifically to satisfy the
+        // Android signature requirement for OTA updates. This ensures the signature
+        // stays consistent across all ephemeral CI runs without exposing private secure keys
+        // or breaking the update pipeline.
+        create("release") {
+            storeFile = file("keystore.jks")
+            storePassword = "biology123"
+            keyAlias = "release"
+            keyPassword = "biology123"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

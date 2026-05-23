@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build APK
@@ -25,14 +28,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Build Signed Release APK
+        # The app/build.gradle.kts is configured to use the committed keystore.jks for release builds.
+        # This guarantees the output is a signed, installable APK with consistent signatures for OTA updates.
         run: ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          # Because it is signed, the output file drops the '-unsigned' suffix
+          path: app/build/outputs/apk/release/app-release.apk
 
   release:
     name: Create GitHub Release
@@ -50,7 +56,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app-release-unsigned.apk
+          files: app-release.apk
           tag_name: ${{ github.ref_name }} # You can change this manually or use github tag ref
           name: "Release Biology Practice Tester"
           draft: false

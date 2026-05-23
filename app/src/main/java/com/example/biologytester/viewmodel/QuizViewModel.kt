@@ -34,7 +34,7 @@ class QuizViewModel(application: Application) : AndroidViewModel(application) {
                 val title = getFileName(context, uri) ?: "Imported Quiz"
                 importQuiz(jsonString, title)
             } catch (e: Exception) {
-                _importStatus.value = "Error reading file: \${e.message}"
+                _importStatus.value = "Error reading file: ${e.message}"
             }
         }
     }
@@ -78,7 +78,7 @@ class QuizViewModel(application: Application) : AndroidViewModel(application) {
                     _importStatus.value = "Error: Invalid JSON format"
                 }
             } catch (e: Exception) {
-                _importStatus.value = "Error: \${e.message}"
+                _importStatus.value = "Error: ${e.message}"
             }
         }
     }
