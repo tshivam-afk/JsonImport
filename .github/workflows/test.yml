@@ -1,0 +1,167 @@
+name: Build Signed Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Android App Version Code'
+        required: true
+        default: '12'
+      version_name:
+        description: 'Android App Version Name'
+        required: true
+        default: '2.5.0'
+      build_type:
+        description: 'Build Type (release / debug)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+jobs:
+  build:
+    name: Build & Sign Android Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java Development Kit (JDK) 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Install Node.js Dependencies
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Build Web Production Assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Initialize Android Native Wrapper with Capacitor
+        run: |
+          npx cap add android
+          npx cap sync
+
+      - name: Setup Android SDK Build tools
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Inject Custom Version Codes
+        run: |
+          if [ -f android/app/build.gradle ]; then
+            sed -i -E "s/(versionCode\s*=?\s*)[0-9]*/\1${{ github.event.inputs.version_code }}/" android/app/build.gradle
+            sed -i -E "s/(versionName\s*=?\s*)\"[^\"]*\"/\1\"${{ github.event.inputs.version_name }}\"/" android/app/build.gradle
+          fi
+
+      - name: Grant Execute Permission to Gradlew
+        run: |
+          chmod +x android/gradlew
+        continue-on-error: true
+
+      - name: Compile and Assemble APK
+        run: |
+          cd android
+          if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
+            ./gradlew assembleDebug
+          else
+            ./gradlew assembleRelease
+          fi
+
+      - name: Align and Sign Release APK
+        if: github.event.inputs.build_type == 'release'
+        env:
+          SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # 1. Generate or Restore Keystore
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "No ANDROID_SIGNING_KEY secret found. Generating temporary self-signed keystore..."
+            keytool -genkeypair -v -keystore temp.jks -keyalg RSA -keysize 2048 -validity 10000 -alias mykey -storepass temppassword -keypass temppassword -dname "CN=Lumen, O=Lumen Prep, C=US"
+            STORE_PASS="temppassword"
+            KEY_PASS="temppassword"
+            ALIAS="mykey"
+          else
+            echo "Using user-provided repository secrets for signing..."
+            echo "$SIGNING_KEY" | base64 -d > temp.jks
+            STORE_PASS="$KEYSTORE_PASSWORD"
+            KEY_PASS="$KEY_PASSWORD"
+            ALIAS="$KEY_ALIAS"
+          fi
+
+          # 2. Find Android Build Tools
+          ZIPALIGN_PATH=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -n 1)
+          APKSIGNER_PATH=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
+
+          if [ -z "$ZIPALIGN_PATH" ] || [ -z "$APKSIGNER_PATH" ]; then
+            echo "Error: Could not find build-tools zipalign/apksigner in $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+
+          echo "Using zipalign at: $ZIPALIGN_PATH"
+          echo "Using apksigner at: $APKSIGNER_PATH"
+
+          # 3. Find Unsigned APK
+          UNSIGNED_APK=$(find android/app/build/outputs/apk/release -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          fi
+          
+          if [ -z "$UNSIGNED_APK" ]; then
+            echo "Error: Could not find any APK file to sign in android/app/build/outputs/apk/release!"
+            exit 1
+          fi
+          
+          echo "Found unsigned APK at: $UNSIGNED_APK"
+
+          # 4. Align the APK
+          $ZIPALIGN_PATH -v 4 "$UNSIGNED_APK" android/app/build/outputs/apk/release/app-release-aligned.apk
+
+          # 5. Sign the APK
+          $APKSIGNER_PATH sign --ks temp.jks --ks-key-alias "$ALIAS" --ks-pass pass:"$STORE_PASS" --key-pass pass:"$KEY_PASS" --out android/app/build/outputs/apk/release/Lumen_NEET_Prep.apk android/app/build/outputs/apk/release/app-release-aligned.apk
+
+          # 6. Verify the signed APK
+          $APKSIGNER_PATH verify android/app/build/outputs/apk/release/Lumen_NEET_Prep.apk
+
+          # 7. Prepare Artifact Directory
+          mkdir -p build-artifacts
+          cp android/app/build/outputs/apk/release/Lumen_NEET_Prep.apk build-artifacts/Lumen_NEET_Prep.apk
+          echo "Prepared release artifact."
+
+      - name: Prepare Debug Artifact
+        if: github.event.inputs.build_type == 'debug'
+        run: |
+          mkdir -p build-artifacts
+          DEBUG_APK=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          if [ -n "$DEBUG_APK" ]; then
+            cp "$DEBUG_APK" build-artifacts/Lumen_NEET_Prep_Debug.apk
+            echo "Successfully prepared debug artifact."
+          else
+            echo "Error: Debug APK not found!"
+            exit 1
+          fi
+
+      - name: Upload Finished APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neet-prep-apks-${{ github.event.inputs.version_name }}
+          path: build-artifacts/*.apk
